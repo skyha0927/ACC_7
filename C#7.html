@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ACC</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #111;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: row;
+      color: white;
+    }
+
+    #left-tab {
+      width: 300px;
+      height: 100vh;
+      background-color: #222;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      position: relative;
+    }
+
+    #tab-sections {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .tab-button {
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    #upgrade-section {
+      display: none;
+    }
+
+    #upgrade-title {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .upgrade {
+      margin-bottom: 15px;
+      background-color: #333;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .upgrade button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      background-color: white;
+      color: black;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .upgrade .info {
+      font-size: 12px;
+      margin-top: 3px;
+      color: #aaa;
+    }
+
+    #main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-left: 50px; /* 여기서 오른쪽으로 살짝 밀었노 이기야 북딱 */
+    }
+
+    #start-screen {
+      text-align: center;
+      transition: opacity 1s ease;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+
+    #main-title {
+      font-size: 80px;
+      margin-bottom: 10px;
+    }
+
+    #subtitle {
+      font-size: 20px;
+      margin-bottom: 40px;
+      color: #ccc;
+    }
+
+    #start-button {
+      font-size: 18px;
+      padding: 10px 25px;
+      background-color: white;
+      color: black;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .fade-out {
+      opacity: 0;
+    }
+
+    #game-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    #score {
+      font-size: 48px;
+      margin-bottom: 30px;
+      font-weight: bold;
+    }
+
+    #rock {
+      width: 150px;
+      height: 150px;
+      background: gray;
+      border-radius: 30px;
+      box-shadow: inset -10px -10px 20px #999, inset 10px 10px 20px #555;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      color: #ccc;
+      transition: transform 0.1s ease;
+    }
+
+    #rock:active {
+      transform: scale(0.95);
+    }
+
+    .cracked {
+      background: linear-gradient(gray, #444);
+      box-shadow: 0 0 10px red;
+    }
+
+    #settings-icon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 30px;
+      cursor: pointer;
+      display: none;
+      user-select: none;
+    }
+
+    #settings-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #222;
+      padding: 30px;
+      border-radius: 10px;
+      color: white;
+      text-align: center;
+      user-select: none;
+    }
+
+    #nickname-display {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="left-tab">
+    <div id="tab-sections">
+      <button class="tab-button" onclick="showSection('profile')">프로필</button>
+      <button class="tab-button" onclick="showSection('pickaxe')">곡괭이</button>
+      <button class="tab-button" onclick="showSection('pet')">펫</button>
+    </div>
+
+    <div id="upgrade-section">
+      <div id="upgrade-title">곡괭이 업그레이드</div>
+      <div class="upgrade" id="wood-up">
+        <div>나무 곡괭이 - 300C$</div>
+        <button onclick="buyPickaxe('wood')">구매</button>
+        <div class="info">+2C$/Click</div>
+      </div>
+      <div class="upgrade" id="copper-up">
+        <div>구리 곡괭이 - 700C$</div>
+        <button onclick="buyPickaxe('copper')">구매</button>
+        <div class="info">+5C$/Click</div>
+      </div>
+      <div class="upgrade" id="tin-up">
+        <div>주석 곡괭이 - 2000C$</div>
+        <button onclick="buyPickaxe('tin')">구매</button>
+        <div class="info">+10C$/Click</div>
+      </div>
+      <div class="upgrade" id="iron-up">
+        <div>철 곡괭이 - 5500C$</div>
+        <button onclick="buyPickaxe('iron')">구매</button>
+        <div class="info">+20C$/Click</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main-area">
+    <div id="start-screen">
+      <div id="main-title">ACC</div>
+      <div id="subtitle">[A Chaos Clicker]</div>
+      <button id="start-button">시작</button>
+    </div>
+
+    <div id="game-screen">
+      <div id="score">0C$</div>
+      <div id="rock">🪨</div>
+    </div>
+  </div>
+
+  <div id="nickname-display"></div>
+  <div id="settings-icon">⚙️</div>
+
+  <div id="settings-modal">
+    <div id="modal-nickname"></div>
+    <input type="text" id="nickname-input" placeholder="닉네임 입력" />
+    <button id="nickname-button">이름 변경</button>
+  </div>
+
+  <script>
+    const startButton = document.getElementById("start-button");
+    const startScreen = document.getElementById("start-screen");
+    const gameScreen = document.getElementById("game-screen");
+    const scoreDisplay = document.getElementById("score");
+    const rock = document.getElementById("rock");
+    const settingsIcon = document.getElementById("settings-icon");
+    const settingsModal = document.getElementById("settings-modal");
+    const nicknameInput = document.getElementById("nickname-input");
+    const nicknameButton = document.getElementById("nickname-button");
+    const nicknameDisplay = document.getElementById("nickname-display");
+    const modalNickname = document.getElementById("modal-nickname");
+    const leftTab = document.getElementById("left-tab");
+    const upgradeSection = document.getElementById("upgrade-section");
+
+    let nickname = "";
+    let score = 0;
+    let clickValue = 1;
+    let owned = {
+      wood: false,
+      copper: false,
+      tin: false,
+      iron: false
+    };
+
+    startButton.addEventListener("click", () => {
+      startScreen.classList.add("fade-out");
+      setTimeout(() => {
+        startScreen.style.display = "none";
+        gameScreen.style.display = "flex";
+        leftTab.style.display = "flex";
+        settingsIcon.style.display = "block";
+        showSection("pickaxe"); // 기본으로 곡괭이 탭 활성화
+        score = 0;
+        scoreDisplay.textContent = score + "C$";
+      }, 500);
+    });
+
+    rock.addEventListener("mousedown", () => {
+      rock.classList.add("cracked");
+      score += clickValue;
+      scoreDisplay.textContent = score + "C$";
+    });
+
+    rock.addEventListener("mouseup", () => {
+      rock.classList.remove("cracked");
+    });
+
+    settingsIcon.addEventListener("click", () => {
+      settingsModal.style.display = "block";
+      modalNickname.textContent = nickname ? nickname : "닉네임 없음";
+    });
+
+    nicknameButton.addEventListener("click", () => {
+      nickname = nicknameInput.value;
+      nicknameDisplay.textContent = `${nickname} | LV.1`;
+      settingsModal.style.display = "none";
+    });
+
+    function buyPickaxe(type) {
+      const prices = { wood: 300, copper: 700, tin: 2000, iron: 5500 };
+      const values = { wood: 2, copper: 5, tin: 10, iron: 20 };
+      if (owned[type]) return;
+
+      if (score >= prices[type]) {
+        score -= prices[type];
+        scoreDisplay.textContent = score + "C$";
+        clickValue = values[type];
+        owned[type] = true;
+
+        const upDiv = document.getElementById(`${type}-up`);
+        upDiv.querySelector("button").textContent = "보유 중";
+        upDiv.querySelector("button").disabled = true;
+      }
+    }
+
+    function showSection(section) {
+      if (section === "pickaxe") {
+        upgradeSection.style.display = "block";
+        upgradeSection.innerHTML = `
+          <div id="upgrade-title">곡괭이 업그레이드</div>
+          <div class="upgrade" id="wood-up">
+            <div>나무 곡괭이 - 300C$</div>
+            <button onclick="buyPickaxe('wood')">구매</button>
+            <div class="info">+2C$/Click</div>
+          </div>
+          <div class="upgrade" id="copper-up">
+            <div>구리 곡괭이 - 700C$</div>
+            <button onclick="buyPickaxe('copper')">구매</button>
+            <div class="info">+5C$/Click</div>
+          </div>
+          <div class="upgrade" id="tin-up">
+            <div>주석 곡괭이 - 2000C$</div>
+            <button onclick="buyPickaxe('tin')">구매</button>
+            <div class="info">+10C$/Click</div>
+          </div>
+          <div class="upgrade" id="iron-up">
+            <div>철 곡괭이 - 5500C$</div>
+            <button onclick="buyPickaxe('iron')">구매</button>
+            <div class="info">+20C$/Click</div>
+          </div>
+        `;
+        updateOwnedButtons();
+      } else if (section === "profile" || section === "pet") {
+        upgradeSection.style.display = "block";
+        upgradeSection.innerHTML = `<div id="upgrade-title">준비 중입니다</div>`;
+      }
+    }
+
+    function updateOwnedButtons() {
+      ['wood', 'copper', 'tin', 'iron'].forEach(type => {
+        if (owned[type]) {
+          const upDiv = document.getElementById(`${type}-up`);
+          if (upDiv) {
+            const btn = upDiv.querySelector('button');
+            btn.textContent = "보유 중";
+            btn.disabled = true;
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
