@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>장봉 RPG v3</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      background: #f0f0f0; font-family: sans-serif;
+    }
+    canvas { background: #fff; display: block; margin: 0 auto; }
+    button { cursor: pointer; }
+    #statBtn { position: absolute; top: 10px; right: 10px; }
+    #statPopup {
+      position: absolute; top: 50px; right: 10px;
+      background: #fff; border: 2px solid #333; padding: 12px;
+      display: none; width: 200px; box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+    }
+    #fixedStat {
+      position: absolute; top: 50px; left: 10px;
+      background: rgba(255,255,255,0.9); padding: 12px 16px;
+      border: 2px solid #333; display: none; width: 220px;
+      font-weight: bold;
+    }
+    .damage-text {
+      position: absolute; font-weight: bold; color: red;
+      pointer-events: none; animation: floatUp 1000ms forwards;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-30px); }
+    }
+    #musicBtn {
+      margin-top: 10px;
+      font-size: 14px;
+      padding: 4px 10px;
+    }
+  </style>
+</head>
+<body>
+  <button id="statBtn">스탯</button>
+  <div id="statPopup">
+    <h3>스탯</h3>
+    <label>닉네임: <input type="text" id="nicknameInput" value="장봉" /></label><br><br>
+    <p id="levelDisplay">Lv. 1</p>
+    <p id="expDisplay">EXP: 0 / 10</p>
+    <p id="atkDisplay">공격력: 1</p>
+    <button id="fixStatBtn">스탯 고정/해제</button><br><br>
+    <button id="musicBtn">🎵 배경음악 토글</button>
+  </div>
+  <div id="fixedStat">닉네임: 장봉<br>Lv. 1<br>EXP: 0 / 10<br>ATK: 1</div>
+  <canvas id="gameCanvas"></canvas>
+  <iframe id="bgm" width="0" height="0" src="https://www.youtube.com/embed/tkqEeiOXJUw?enablejsapi=1&autoplay=0&loop=1" frameborder="0" allow="autoplay"></iframe>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const player = {
+      x: 50, y: 0, width: 40, height: 60,
+      velocityX: 0, velocityY: 0, speed: 4, jumping: false,
+      gravity: 0.5, jumpPower: 12, attacking: false,
+      attackCooldown: 0, direction: 'right',
+      attackPower: 1, level: 1, exp: 0, expToLevel: 10
+    };
+
+    const keys = {};
+    const monsters = [];
+    const MAX_MONSTERS = 3;
+    let attackPressTime = 0;
+
+    const statBtn = document.getElementById('statBtn');
+    const statPopup = document.getElementById('statPopup');
+    const nicknameInput = document.getElementById('nicknameInput');
+    const levelDisplay = document.getElementById('levelDisplay');
+    const expDisplay = document.getElementById('expDisplay');
+    const atkDisplay = document.getElementById('atkDisplay');
+    const fixStatBtn = document.getElementById('fixStatBtn');
+    const fixedStat = document.getElementById('fixedStat');
+    const musicBtn = document.getElementById('musicBtn');
+    const bgm = document.getElementById('bgm');
+
+    let isFixed = false;
+    let musicOn = false;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * 0.6;
+      canvas.height = window.innerHeight * 0.6;
+      const floorY = canvas.height - 40;
+      player.y = floorY - player.height;
+    }
+
+    function updateFixedStat() {
+      fixedStat.innerHTML =
+        `닉네임: ${nicknameInput.value}<br>` +
+        `Lv. ${player.level}<br>` +
+        `EXP: ${player.exp} / ${player.expToLevel}<br>` +
+        `ATK: ${player.attackPower}`;
+    }
+
+    statBtn.onclick = () => {
+      statPopup.style.display = statPopup.style.display === 'block' ? 'none' : 'block';
+    };
+
+    fixStatBtn.onclick = () => {
+      isFixed = !isFixed;
+      fixedStat.style.display = isFixed ? 'block' : 'none';
+      if (isFixed) updateFixedStat();
+    };
+
+    nicknameInput.oninput = () => {
+      if (isFixed) updateFixedStat();
+    };
+
+    musicBtn.onclick = () => {
+      musicOn = !musicOn;
+      bgm.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func: musicOn ? "playVideo" : "pauseVideo" }),
+        "*"
+      );
+    };
+
+    document.addEventListener('keydown', e => {
+      keys[e.key.toLowerCase()] = true;
+    });
+    document.addEventListener('keyup', e => {
+      if (e.key.toLowerCase() === 'f') attackPressTime = 0;
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    function createDamageText(x, y, text) {
+      const dmg = document.createElement('div');
+      dmg.className = 'damage-text';
+      dmg.style.left = x + 'px';
+      dmg.style.top = y + 'px';
+      dmg.textContent = text;
+      document.body.appendChild(dmg);
+      setTimeout(() => dmg.remove(), 1000);
+    }
+
+    function gainExp(amount) {
+      player.exp += amount;
+      if (player.exp >= player.expToLevel) {
+        player.exp = 0;
+        player.level++;
+        player.expToLevel = Math.floor(player.expToLevel * 1.5);
+        player.attackPower++;
+        levelDisplay.textContent = `Lv. ${player.level}`;
+        expDisplay.textContent = `EXP: ${player.exp} / ${player.expToLevel}`;
+        atkDisplay.textContent = `공격력: ${player.attackPower}`;
+        if (isFixed) updateFixedStat();
+      } else {
+        expDisplay.textContent = `EXP: ${player.exp} / ${player.expToLevel}`;
+        if (isFixed) updateFixedStat();
+      }
+    }
+
+    function spawnMonster() {
+      const level = Math.random() < 0.5 ? 1 : 2;
+      const health = level === 1 ? 3 : 7;
+      const expGain = level === 1 ? 5 : 11;
+      monsters.push({
+        x: Math.random() * (canvas.width - 60) + 30,
+        y: canvas.height - 40 - player.height,
+        width: 40,
+        height: player.height,
+        health,
+        maxHealth: health,
+        level,
+        expGain,
+        description: `Lv.${level} | 중국 불법 이민자`,
+        alive: true
+      });
+    }
+
+    function update() {
+      if (keys['arrowright'] || keys['d']) {
+        player.velocityX = player.speed;
+        player.direction = 'right';
+      } else if (keys['arrowleft'] || keys['a']) {
+        player.velocityX = -player.speed;
+        player.direction = 'left';
+      } else {
+        player.velocityX = 0;
+      }
+
+      if ((keys[' '] || keys['w'] || keys['arrowup']) && !player.jumping) {
+        player.velocityY = -player.jumpPower;
+        player.jumping = true;
+      }
+
+      player.velocityY += player.gravity;
+      player.x += player.velocityX;
+      player.y += player.velocityY;
+
+      const floorY = canvas.height - 40;
+      if (player.y + player.height >= floorY) {
+        player.y = floorY - player.height;
+        player.velocityY = 0;
+        player.jumping = false;
+      }
+
+      if (player.attackCooldown > 0) player.attackCooldown--;
+
+      if (keys['f']) {
+        attackPressTime += 1 / 60;
+        if (attackPressTime > 0.8) return;
+
+        if (!player.attacking && player.attackCooldown === 0) {
+          player.attacking = true;
+          player.attackCooldown = 20;
+
+          const attackX = player.direction === 'right' ? player.x + player.width : player.x - 50;
+          const attackRange = { x: attackX, y: player.y, width: 50, height: player.height };
+
+          monsters.forEach((enemy, idx) => {
+            if (
+              enemy.alive &&
+              attackRange.x < enemy.x + enemy.width &&
+              attackRange.x + attackRange.width > enemy.x &&
+              attackRange.y < enemy.y + enemy.height &&
+              attackRange.y + attackRange.height > enemy.y
+            ) {
+              enemy.health -= player.attackPower;
+              createDamageText(enemy.x + enemy.width / 2, enemy.y, `-${player.attackPower}`);
+              if (enemy.health <= 0) {
+                enemy.alive = false;
+                monsters.splice(idx, 1);
+                gainExp(enemy.expGain);
+              }
+            }
+          });
+
+          setTimeout(() => (player.attacking = false), 200);
+        }
+      }
+
+      while (monsters.length < MAX_MONSTERS) spawnMonster();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ccc';
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+
+      ctx.fillStyle = 'red';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      if (player.attacking) {
+        ctx.fillStyle = 'orange';
+        const atkX = player.direction === 'right' ? player.x + player.width : player.x - 50;
+        ctx.fillRect(atkX, player.y + 10, 50, player.height - 20);
+      }
+
+      monsters.forEach(enemy => {
+        ctx.fillStyle = 'green';
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+
+        ctx.fillStyle = 'black';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(enemy.description, enemy.x + enemy.width / 2, enemy.y - 20);
+        ctx.fillText(`HP: ${enemy.health}/${enemy.maxHealth}`, enemy.x + enemy.width / 2, enemy.y - 5);
+      });
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    resizeCanvas();
+    gameLoop();
+  </script>
+</body>
+</html>
